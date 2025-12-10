@@ -1,12 +1,30 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Header } from '@/components/Header';
+import { TileGrid } from '@/components/TileGrid';
+import { useTileStore } from '@/hooks/useTileStore';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+  const { tiles, isLoading } = useTileStore();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-2">Welcome to TileHub</h1>
+          <p className="text-lg text-muted-foreground">
+            Your central navigation portal
+          </p>
+        </div>
+        <TileGrid tiles={tiles} />
+      </main>
     </div>
   );
 };
