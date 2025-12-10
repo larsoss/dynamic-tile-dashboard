@@ -1,4 +1,4 @@
-import { ThemeSettings } from '@/types/tile';
+import { ThemeSettings, DEFAULT_THEME } from '@/types/tile';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,6 @@ interface ThemeCustomizerProps {
   theme: ThemeSettings;
   onSave: (theme: ThemeSettings) => void;
 }
-
-const DEFAULT_THEME: ThemeSettings = {
-  primaryColor: '#E9B949',
-  secondaryColor: '#A88CC8',
-  backgroundColor: '#FFF5EB',
-  textColor: '#2D3748',
-};
 
 export function ThemeCustomizer({ theme, onSave }: ThemeCustomizerProps) {
   const handleColorChange = (key: keyof ThemeSettings, value: string) => {
@@ -117,6 +110,60 @@ export function ThemeCustomizer({ theme, onSave }: ThemeCustomizerProps) {
             />
           </div>
           <p className="text-xs text-muted-foreground">Text throughout the site</p>
+        </div>
+      </div>
+
+      {/* Site Content Section */}
+      <div className="mt-8 pt-6 border-t border-border">
+        <h3 className="text-lg font-semibold mb-4">Site Content</h3>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="siteName">Site Name</Label>
+            <Input
+              type="text"
+              id="siteName"
+              value={theme.siteName}
+              onChange={(e) => handleColorChange('siteName', e.target.value)}
+              placeholder="TileHub"
+            />
+            <p className="text-xs text-muted-foreground">Shown in the header</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="logoUrl">Logo URL (optional)</Label>
+            <Input
+              type="text"
+              id="logoUrl"
+              value={theme.logoUrl}
+              onChange={(e) => handleColorChange('logoUrl', e.target.value)}
+              placeholder="https://example.com/logo.png"
+            />
+            <p className="text-xs text-muted-foreground">Custom logo image URL</p>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="welcomeTitle">Welcome Title</Label>
+            <Input
+              type="text"
+              id="welcomeTitle"
+              value={theme.welcomeTitle}
+              onChange={(e) => handleColorChange('welcomeTitle', e.target.value)}
+              placeholder="Welcome to TileHub"
+            />
+            <p className="text-xs text-muted-foreground">Main heading on the homepage</p>
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="welcomeSubtitle">Welcome Subtitle</Label>
+            <Input
+              type="text"
+              id="welcomeSubtitle"
+              value={theme.welcomeSubtitle}
+              onChange={(e) => handleColorChange('welcomeSubtitle', e.target.value)}
+              placeholder="Your central navigation portal"
+            />
+            <p className="text-xs text-muted-foreground">Subtitle below the main heading</p>
+          </div>
         </div>
       </div>
 
