@@ -26,13 +26,23 @@ type ApiConfig = {
   }[];
 };
 
+/**
+ * ✅ Browser-safe ID generator (werkt ook op TV / oudere browsers)
+ */
+function generateId(): string {
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).substring(2, 10)
+  );
+}
+
 export function useTileStore() {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [theme, setTheme] = useState<ThemeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * 1️⃣ Laden van config uit backend (SQLite)
+   * 1️⃣ Config laden uit backend (SQLite)
    */
   useEffect(() => {
     fetch("/api/config")
@@ -41,9 +51,8 @@ export function useTileStore() {
         return res.json();
       })
       .then((data: ApiConfig) => {
-        // Tiles
         const loadedTiles: Tile[] = (data.tiles || []).map((t, index) => ({
-          id: String(t.id ?? crypto.randomUUID()),
+          id: String(t.id ?? generateId()),
           title: t.title,
           url: t.url,
           icon: t.icon ?? undefined,
@@ -53,7 +62,6 @@ export function useTileStore() {
 
         setTiles(loadedTiles);
 
-        // Theme
         setTheme({
           primaryColor: data.theme.primary_color ?? "#0f172a",
           secondaryColor: data.theme.accent_color ?? "#38bdf8",
@@ -93,7 +101,6 @@ export function useTileStore() {
       alert("Admin token ontbreekt");
       throw new Error("No admin token");
     }
-
     if (!theme) return;
 
     const payload = {
@@ -132,12 +139,12 @@ export function useTileStore() {
   }
 
   /**
-   * 3️⃣ Tile-acties (nu écht DB-backed)
+   * 3️⃣ Tile-acties (volledig DB-backed)
    */
   const addTile = async (tile: Omit<Tile, "id" | "order">) => {
     const newTile: Tile = {
       ...tile,
-      id: crypto.randomUUID(),
+      id: generateId(),
       order: tiles.length + 1,
     };
 
@@ -187,7 +194,7 @@ export function useTileStore() {
 }
 
 /**
- * Helper: hex → HSL voor CSS variables
+ * Helper: hex → HSL (voor CSS variables)
  */
 function hexToHSL(hex: string): string {
   hex = hex.replace(/^#/, "");
@@ -217,5 +224,7 @@ function hexToHSL(hex: string): string {
     }
   }
 
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(
+    l * 100
+  )}%`;
 }
