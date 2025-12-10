@@ -11,14 +11,14 @@ interface ThemeCustomizerProps {
 
 export function ThemeCustomizer({ theme, onSave }: ThemeCustomizerProps) {
   // ✅ Defensieve guard BINNEN de component
-  if (!theme || !theme.primaryColor) {
+  if (!theme) {
     return (
       <div className="text-muted-foreground p-4">
         Theme wordt geladen…
       </div>
     );
   }
-
+  
   const handleChange = (
     key: keyof ThemeSettings,
     value: string
