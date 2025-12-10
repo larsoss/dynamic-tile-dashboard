@@ -21,7 +21,7 @@ export function Header({ theme }: HeaderProps) {
           ) : (
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center transition-transform group-hover:scale-105">
               <span className="text-primary-foreground font-bold text-lg">
-                {theme.siteName.charAt(0).toUpperCase()}
+                {theme.siteName?.charAt(0)?.toUpperCase() ?? ""}
               </span>
             </div>
           )}
