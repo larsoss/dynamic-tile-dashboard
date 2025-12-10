@@ -1,102 +1,108 @@
-import { useState, useEffect } from 'react';
-import { Tile, ThemeSettings, DEFAULT_TILES, DEFAULT_THEME } from '@/types/tile';
+import { useState, useEffect } from "react";
+import { Tile, ThemeSettings } from "@/types/tile";
 
-const TILES_STORAGE_KEY = 'tiles-data';
-const THEME_STORAGE_KEY = 'theme-settings';
+type ApiConfig = {
+  settings: {
+    site_name: string;
+    subtitle: string;
+  };
+  theme: {
+    primary_color: string | null;
+    background_color: string | null;
+    accent_color: string | null;
+    border_radius: number | null;
+  };
+  tiles: any[];
+};
 
 export function useTileStore() {
   const [tiles, setTiles] = useState<Tile[]>([]);
-  const [theme, setTheme] = useState<ThemeSettings>(DEFAULT_THEME);
+  const [theme, setTheme] = useState<ThemeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load data from localStorage on mount
+  // ✅ Stap 1: config laden uit backend (DB)
   useEffect(() => {
-    const storedTiles = localStorage.getItem(TILES_STORAGE_KEY);
-    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    fetch("/api/config")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load config");
+        return res.json();
+      })
+      .then((data: ApiConfig) => {
+        // Tiles
+        setTiles(
+          (data.tiles || []).map((t, index) => ({
+            id: t.id,
+            title: t.title,
+            url: t.url,
+            icon: t.icon,
+            color: t.color,
+            order: t.position ?? index + 1,
+          }))
+        );
 
-    if (storedTiles) {
-      setTiles(JSON.parse(storedTiles));
-    } else {
-      setTiles(DEFAULT_TILES);
-    }
+        // Theme → omzetten naar jouw ThemeSettings
+        setTheme({
+          primaryColor: data.theme.primary_color ?? "#0f172a",
+          secondaryColor: data.theme.accent_color ?? "#38bdf8",
+          backgroundColor: data.theme.background_color ?? "#020617",
+          textColor: "#ffffff",
+          welcomeTitle: data.settings.site_name,
+          welcomeSubtitle: data.settings.subtitle,
+        });
 
-    if (storedTheme) {
-      setTheme(JSON.parse(storedTheme));
-    }
-
-    setIsLoading(false);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load dashboard config", err);
+        setIsLoading(false);
+      });
   }, []);
 
-  // Apply theme colors to CSS variables
+  // ✅ Theme toepassen op CSS-variabelen (dit blijft intact)
   useEffect(() => {
-    if (!isLoading) {
-      const root = document.documentElement;
-      root.style.setProperty('--theme-primary', hexToHSL(theme.primaryColor));
-      root.style.setProperty('--theme-secondary', hexToHSL(theme.secondaryColor));
-      root.style.setProperty('--theme-background', hexToHSL(theme.backgroundColor));
-      root.style.setProperty('--theme-text', hexToHSL(theme.textColor));
-    }
-  }, [theme, isLoading]);
+    if (!theme) return;
 
-  // Save tiles to localStorage
-  const saveTiles = (newTiles: Tile[]) => {
-    setTiles(newTiles);
-    localStorage.setItem(TILES_STORAGE_KEY, JSON.stringify(newTiles));
+    const root = document.documentElement;
+    root.style.setProperty("--theme-primary", hexToHSL(theme.primaryColor));
+    root.style.setProperty("--theme-secondary", hexToHSL(theme.secondaryColor));
+    root.style.setProperty("--theme-background", hexToHSL(theme.backgroundColor));
+    root.style.setProperty("--theme-text", hexToHSL(theme.textColor));
+  }, [theme]);
+
+  // ⛔️ Opslaan doen we LATER via backend (Admin-pagina)
+  const addTile = () => {
+    console.warn("addTile not implemented yet (DB-backed)");
   };
 
-  // Save theme to localStorage
-  const saveTheme = (newTheme: ThemeSettings) => {
-    setTheme(newTheme);
-    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(newTheme));
+  const updateTile = () => {
+    console.warn("updateTile not implemented yet (DB-backed)");
   };
 
-  const addTile = (tile: Omit<Tile, 'id' | 'order'>) => {
-    const newTile: Tile = {
-      ...tile,
-      id: crypto.randomUUID(),
-      order: tiles.length + 1,
-    };
-    saveTiles([...tiles, newTile]);
+  const deleteTile = () => {
+    console.warn("deleteTile not implemented yet (DB-backed)");
   };
 
-  const updateTile = (id: string, updates: Partial<Tile>) => {
-    saveTiles(tiles.map((t) => (t.id === id ? { ...t, ...updates } : t)));
-  };
-
-  const deleteTile = (id: string) => {
-    const filtered = tiles.filter((t) => t.id !== id);
-    // Recalculate order
-    const reordered = filtered.map((t, index) => ({ ...t, order: index + 1 }));
-    saveTiles(reordered);
-  };
-
-  const reorderTiles = (newOrder: Tile[]) => {
-    const reordered = newOrder.map((t, index) => ({ ...t, order: index + 1 }));
-    saveTiles(reordered);
-  };
-
-  const getSortedTiles = () => {
-    return [...tiles].sort((a, b) => a.order - b.order);
+  const reorderTiles = () => {
+    console.warn("reorderTiles not implemented yet (DB-backed)");
   };
 
   return {
-    tiles: getSortedTiles(),
+    tiles: [...tiles].sort((a, b) => a.order - b.order),
     theme,
     isLoading,
     addTile,
     updateTile,
     deleteTile,
     reorderTiles,
-    saveTheme,
+    saveTheme: () => {
+      console.warn("saveTheme not implemented yet (DB-backed)");
+    },
   };
 }
 
-// Helper function to convert hex to HSL string for CSS variables
+// Helper blijft exact hetzelfde
 function hexToHSL(hex: string): string {
-  // Remove # if present
-  hex = hex.replace(/^#/, '');
-
-  // Parse r, g, b values
+  hex = hex.replace(/^#/, "");
   const r = parseInt(hex.substring(0, 2), 16) / 255;
   const g = parseInt(hex.substring(2, 4), 16) / 255;
   const b = parseInt(hex.substring(4, 6), 16) / 255;
@@ -110,7 +116,6 @@ function hexToHSL(hex: string): string {
   if (max !== min) {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
     switch (max) {
       case r:
         h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
