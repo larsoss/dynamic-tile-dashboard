@@ -1,128 +1,74 @@
-import { useState } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { Tile } from '@/types/tile';
-import { SortableTileItem } from './SortableTileItem';
-import { TileFormDialog } from './TileFormDialog';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { useState } from "react";
+import { Tile } from "@/types/tile";
+import { Button } from "@/components/ui/button";
+import { TileFormDialog } from "./TileFormDialog";
+import { SortableTileItem } from "./SortableTileItem";
+import { useTileStore } from "@/hooks/useTileStore";
 
-interface TileManagerProps {
-  tiles: Tile[];
-  onAddTile: (tile: Omit<Tile, 'id' | 'order'>) => void;
-  onUpdateTile: (id: string, updates: Partial<Tile>) => void;
-  onDeleteTile: (id: string) => void;
-  onReorder: (tiles: Tile[]) => void;
-}
+export function TileManager() {
+  const {
+    tiles,
+    addTile,
+    updateTile,
+    deleteTile,
+    reorderTiles,
+  } = useTileStore();
 
-export function TileManager({
-  tiles,
-  onAddTile,
-  onUpdateTile,
-  onDeleteTile,
-  onReorder,
-}: TileManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTile, setEditingTile] = useState<Tile | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const oldIndex = tiles.findIndex((t) => t.id === active.id);
-      const newIndex = tiles.findIndex((t) => t.id === over.id);
-
-      const newTiles = [...tiles];
-      const [removed] = newTiles.splice(oldIndex, 1);
-      newTiles.splice(newIndex, 0, removed);
-
-      onReorder(newTiles);
+  /**
+   * ✅ EXPLICIETE save-handler
+   * (dit voorkomt “t is not a function”)
+   */
+  const handleSaveTile = async (
+    tile: Omit<Tile, "id" | "order">
+  ) => {
+    if (typeof addTile !== "function") {
+      console.error("addTile is not a function", addTile);
+      return;
     }
-  };
 
-  const handleEdit = (tile: Tile) => {
-    setEditingTile(tile);
-    setDialogOpen(true);
-  };
-
-  const handleSave = (tileData: Omit<Tile, 'id' | 'order'>) => {
     if (editingTile) {
-      onUpdateTile(editingTile.id, tileData);
+      await updateTile(editingTile.id, tile);
     } else {
-      onAddTile(tileData);
+      await addTile(tile);
     }
+
+    setDialogOpen(false);
     setEditingTile(null);
   };
 
-  const handleDialogChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      setEditingTile(null);
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Tile Management</h2>
-          <p className="text-muted-foreground">Drag to reorder, click to edit</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Tile
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setEditingTile(null);
+            setDialogOpen(true);
+          }}
+        >
+          + Add Tile
         </Button>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={tiles.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {tiles.map((tile) => (
-              <SortableTileItem
-                key={tile.id}
-                tile={tile}
-                onEdit={handleEdit}
-                onDelete={onDeleteTile}
-              />
-            ))}
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {tiles.length === 0 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No tiles yet. Click "Add Tile" to create your first tile.</p>
-        </div>
-      )}
+      {tiles.map((tile) => (
+        <SortableTileItem
+          key={tile.id}
+          tile={tile}
+          onEdit={() => {
+            setEditingTile(tile);
+            setDialogOpen(true);
+          }}
+          onDelete={() => deleteTile(tile.id)}
+        />
+      ))}
 
       <TileFormDialog
         open={dialogOpen}
-        onOpenChange={handleDialogChange}
+        onOpenChange={setDialogOpen}
         tile={editingTile}
-        onSave={handleSave}
+        onSave={handleSaveTile}
       />
     </div>
   );
