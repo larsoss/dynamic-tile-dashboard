@@ -1,8 +1,8 @@
-import { ThemeSettings, DEFAULT_THEME } from '@/types/tile';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { RotateCcw } from 'lucide-react';
+import { ThemeSettings, DEFAULT_THEME } from "@/types/tile";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
 
 interface ThemeCustomizerProps {
   theme: ThemeSettings;
@@ -10,194 +10,120 @@ interface ThemeCustomizerProps {
 }
 
 export function ThemeCustomizer({ theme, onSave }: ThemeCustomizerProps) {
-  const handleColorChange = (key: keyof ThemeSettings, value: string) => {
-    onSave({ ...theme, [key]: value });
+  // ✅ Defensieve guard BINNEN de component
+  if (!theme || !theme.primaryColor) {
+    return (
+      <div className="text-muted-foreground p-4">
+        Theme wordt geladen…
+      </div>
+    );
+  }
+
+  const handleChange = (
+    key: keyof ThemeSettings,
+    value: string
+  ) => {
+    onSave({
+      ...theme,
+      [key]: value,
+    });
   };
 
   const handleReset = () => {
-    onSave(DEFAULT_THEME);
+    onSave({
+      ...DEFAULT_THEME,
+      logoUrl: DEFAULT_THEME.logoUrl || "",
+    });
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Theme Customization</h2>
-          <p className="text-muted-foreground">Customize colors for your tile grid</p>
+          <h2 className="text-2xl font-bold">Theme</h2>
+          <p className="text-muted-foreground">
+            Pas kleuren en teksten van je dashboard aan
+          </p>
         </div>
+
         <Button variant="outline" onClick={handleReset}>
           <RotateCcw className="w-4 h-4 mr-2" />
-          Reset to Default
+          Reset
         </Button>
       </div>
 
+      {/* Colors */}
       <div className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="primaryColor">Primary Color</Label>
-          <div className="flex gap-3">
-            <Input
-              type="color"
-              id="primaryColor"
-              value={theme.primaryColor}
-              onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-              className="w-16 h-10 p-1 cursor-pointer"
-            />
-            <Input
-              type="text"
-              value={theme.primaryColor}
-              onChange={(e) => handleColorChange('primaryColor', e.target.value)}
-              className="flex-1"
-            />
+        {[
+          ["primaryColor", "Primary color"],
+          ["secondaryColor", "Secondary color"],
+          ["backgroundColor", "Background color"],
+          ["textColor", "Text color"],
+        ].map(([key, label]) => (
+          <div key={key} className="space-y-2">
+            <Label>{label}</Label>
+            <div className="flex gap-3">
+              <Input
+                type="color"
+                value={theme[key as keyof ThemeSettings] as string}
+                onChange={(e) =>
+                  handleChange(
+                    key as keyof ThemeSettings,
+                    e.target.value
+                  )
+                }
+                className="w-16 h-10 p-1 cursor-pointer"
+              />
+              <Input
+                type="text"
+                value={theme[key as keyof ThemeSettings] as string}
+                onChange={(e) =>
+                  handleChange(
+                    key as keyof ThemeSettings,
+                    e.target.value
+                  )
+                }
+                className="flex-1"
+              />
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground">Used for buttons and accents</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="secondaryColor">Secondary Color</Label>
-          <div className="flex gap-3">
-            <Input
-              type="color"
-              id="secondaryColor"
-              value={theme.secondaryColor}
-              onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-              className="w-16 h-10 p-1 cursor-pointer"
-            />
-            <Input
-              type="text"
-              value={theme.secondaryColor}
-              onChange={(e) => handleColorChange('secondaryColor', e.target.value)}
-              className="flex-1"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Used for hover effects</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="backgroundColor">Background Color</Label>
-          <div className="flex gap-3">
-            <Input
-              type="color"
-              id="backgroundColor"
-              value={theme.backgroundColor}
-              onChange={(e) => handleColorChange('backgroundColor', e.target.value)}
-              className="w-16 h-10 p-1 cursor-pointer"
-            />
-            <Input
-              type="text"
-              value={theme.backgroundColor}
-              onChange={(e) => handleColorChange('backgroundColor', e.target.value)}
-              className="flex-1"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Main page background</p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="textColor">Text Color</Label>
-          <div className="flex gap-3">
-            <Input
-              type="color"
-              id="textColor"
-              value={theme.textColor}
-              onChange={(e) => handleColorChange('textColor', e.target.value)}
-              className="w-16 h-10 p-1 cursor-pointer"
-            />
-            <Input
-              type="text"
-              value={theme.textColor}
-              onChange={(e) => handleColorChange('textColor', e.target.value)}
-              className="flex-1"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Text throughout the site</p>
-        </div>
+        ))}
       </div>
 
-      {/* Site Content Section */}
-      <div className="mt-8 pt-6 border-t border-border">
-        <h3 className="text-lg font-semibold mb-4">Site Content</h3>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="siteName">Site Name</Label>
-            <Input
-              type="text"
-              id="siteName"
-              value={theme.siteName}
-              onChange={(e) => handleColorChange('siteName', e.target.value)}
-              placeholder="TileHub"
-            />
-            <p className="text-xs text-muted-foreground">Shown in the header</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="logoUrl">Logo URL (optional)</Label>
-            <Input
-              type="text"
-              id="logoUrl"
-              value={theme.logoUrl}
-              onChange={(e) => handleColorChange('logoUrl', e.target.value)}
-              placeholder="https://example.com/logo.png"
-            />
-            <p className="text-xs text-muted-foreground">Custom logo image URL</p>
-          </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="welcomeTitle">Welcome Title</Label>
-            <Input
-              type="text"
-              id="welcomeTitle"
-              value={theme.welcomeTitle}
-              onChange={(e) => handleColorChange('welcomeTitle', e.target.value)}
-              placeholder="Welcome to TileHub"
-            />
-            <p className="text-xs text-muted-foreground">Main heading on the homepage</p>
-          </div>
-
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="welcomeSubtitle">Welcome Subtitle</Label>
-            <Input
-              type="text"
-              id="welcomeSubtitle"
-              value={theme.welcomeSubtitle}
-              onChange={(e) => handleColorChange('welcomeSubtitle', e.target.value)}
-              placeholder="Your central navigation portal"
-            />
-            <p className="text-xs text-muted-foreground">Subtitle below the main heading</p>
-          </div>
+      {/* Site content */}
+      <div className="pt-6 border-t border-border space-y-4">
+        <div>
+          <Label>Site naam</Label>
+          <Input
+            value={theme.welcomeTitle}
+            onChange={(e) =>
+              handleChange("welcomeTitle", e.target.value)
+            }
+            placeholder="Welkom"
+          />
         </div>
-      </div>
 
-      {/* Preview */}
-      <div className="mt-8 p-6 rounded-xl border border-border bg-card">
-        <h3 className="font-semibold mb-4">Preview</h3>
-        <div 
-          className="grid grid-cols-4 gap-3 p-4 rounded-lg"
-          style={{ backgroundColor: theme.backgroundColor }}
-        >
-          <div 
-            className="aspect-square rounded-lg flex items-center justify-center text-sm font-medium"
-            style={{ backgroundColor: theme.primaryColor, color: '#fff' }}
-          >
-            Primary
-          </div>
-          <div 
-            className="aspect-square rounded-lg flex items-center justify-center text-sm font-medium"
-            style={{ backgroundColor: theme.secondaryColor, color: '#fff' }}
-          >
-            Secondary
-          </div>
-          <div 
-            className="aspect-square rounded-lg flex items-center justify-center text-sm font-medium border border-current"
-            style={{ backgroundColor: theme.backgroundColor, color: theme.textColor }}
-          >
-            Background
-          </div>
-          <div 
-            className="aspect-square rounded-lg flex items-center justify-center text-sm font-medium"
-            style={{ backgroundColor: theme.textColor, color: theme.backgroundColor }}
-          >
-            Text
-          </div>
+        <div>
+          <Label>Subtitel</Label>
+          <Input
+            value={theme.welcomeSubtitle}
+            onChange={(e) =>
+              handleChange("welcomeSubtitle", e.target.value)
+            }
+            placeholder="Jouw centrale dashboard"
+          />
+        </div>
+
+        <div>
+          <Label>Logo URL (optioneel)</Label>
+          <Input
+            value={theme.logoUrl || ""}
+            onChange={(e) =>
+              handleChange("logoUrl", e.target.value)
+            }
+            placeholder="https://..."
+          />
         </div>
       </div>
     </div>
