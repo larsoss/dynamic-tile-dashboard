@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tile, ThemeSettings } from "@/types/tile";
 
 /**
@@ -37,7 +37,7 @@ function generateId(): string {
 }
 
 /**
- * ✅ Altijd geldige default theme (NOOIT null)
+ * ✅ Altijd compleet theme (NOOIT null)
  */
 const DEFAULT_THEME: ThemeSettings = {
   primaryColor: "#0f172a",
@@ -46,7 +46,7 @@ const DEFAULT_THEME: ThemeSettings = {
   textColor: "#ffffff",
   welcomeTitle: "",
   welcomeSubtitle: "",
-  logoUrl: null,
+  logoUrl: "", // ✅ leeg string, nooit null
 };
 
 export function useTileStore() {
@@ -55,7 +55,7 @@ export function useTileStore() {
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * 1️⃣ Config laden uit backend (SQLite)
+   * 1️⃣ Config laden uit backend
    */
   useEffect(() => {
     fetch("/api/config")
@@ -64,33 +64,33 @@ export function useTileStore() {
         return res.json();
       })
       .then((data: ApiConfig) => {
-        const loadedTiles: Tile[] = (data.tiles || []).map((t, index) => ({
-          id: String(t.id ?? generateId()),
-          title: t.title,
-          url: t.url,
-          icon: t.icon ?? undefined,
-          color: t.color ?? undefined,
-          order: t.position ?? index + 1,
-        }));
+        setTiles(
+          (data.tiles || []).map((t, index) => ({
+            id: String(t.id ?? generateId()),
+            title: t.title,
+            url: t.url,
+            icon: t.icon ?? "",
+            color: t.color ?? "",
+            order: t.position ?? index + 1,
+          }))
+        );
 
-        setTiles(loadedTiles);
-
-        // ✅ theme altijd volledig
         setTheme({
           primaryColor: data.theme.primary_color ?? DEFAULT_THEME.primaryColor,
-          secondaryColor: data.theme.accent_color ?? DEFAULT_THEME.secondaryColor,
+          secondaryColor:
+            data.theme.accent_color ?? DEFAULT_THEME.secondaryColor,
           backgroundColor:
             data.theme.background_color ?? DEFAULT_THEME.backgroundColor,
           textColor: DEFAULT_THEME.textColor,
           welcomeTitle: data.settings.site_name ?? "",
           welcomeSubtitle: data.settings.subtitle ?? "",
-          logoUrl: null, // toekomstvast
+          logoUrl: "", // ✅ voorkomt logoUrl-crash
         });
 
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load dashboard config", err);
+        console.error("Config load failed", err);
         setIsLoading(false);
       });
   }, []);
@@ -112,98 +112,105 @@ export function useTileStore() {
   /**
    * Helper: alles opslaan naar backend
    */
-  async function saveToBackend(updatedTiles: Tile[]) {
-    const adminToken = localStorage.getItem("adminToken");
-    if (!adminToken) {
-      alert("Admin token ontbreekt");
-      throw new Error("No admin token");
-    }
+  const saveToBackend = useCallback(
+    async (updatedTiles: Tile[]) => {
+      const adminToken = localStorage.getItem("adminToken");
+      if (!adminToken) throw new Error("Admin token ontbreekt");
 
-    const payload = {
-      settings: {
-        site_name: theme.welcomeTitle,
-        subtitle: theme.welcomeSubtitle,
-      },
-      theme: {
-        primary_color: theme.primaryColor,
-        background_color: theme.backgroundColor,
-        accent_color: theme.secondaryColor,
-        border_radius: 16,
-      },
-      tiles: updatedTiles.map((t, index) => ({
-        title: t.title,
-        url: t.url,
-        icon: t.icon ?? null,
-        color: t.color ?? null,
-        position: index + 1,
-        enabled: 1,
-      })),
-    };
+      const payload = {
+        settings: {
+          site_name: theme.welcomeTitle,
+          subtitle: theme.welcomeSubtitle,
+        },
+        theme: {
+          primary_color: theme.primaryColor,
+          background_color: theme.backgroundColor,
+          accent_color: theme.secondaryColor,
+          border_radius: 16,
+        },
+        tiles: updatedTiles.map((t, index) => ({
+          title: t.title,
+          url: t.url,
+          icon: t.icon || null,
+          color: t.color || null,
+          position: index + 1,
+          enabled: 1,
+        })),
+      };
 
-    const res = await fetch("/api/config", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${adminToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
+      const res = await fetch("/api/config", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    if (!res.ok) {
-      throw new Error("Opslaan naar backend mislukt");
-    }
-  }
+      if (!res.ok) throw new Error("Opslaan mislukt");
+    },
+    [theme]
+  );
 
   /**
-   * 3️⃣ Tile-acties (volledig DB-backed)
+   * 3️⃣ Tile acties (ALTIJD functies → voorkomt “t is not a function”)
    */
-  const addTile = async (tile: Omit<Tile, "id" | "order">) => {
-    const newTile: Tile = {
-      ...tile,
-      id: generateId(),
-      order: tiles.length + 1,
-    };
+  const addTile = useCallback(
+    async (tile: Omit<Tile, "id" | "order">) => {
+      const updated = [
+        ...tiles,
+        { ...tile, id: generateId(), order: tiles.length + 1 },
+      ];
+      setTiles(updated);
+      await saveToBackend(updated);
+    },
+    [tiles, saveToBackend]
+  );
 
-    const updated = [...tiles, newTile];
-    setTiles(updated);
-    await saveToBackend(updated);
-  };
+  const updateTile = useCallback(
+    async (id: string, updates: Partial<Tile>) => {
+      const updated = tiles.map((t) =>
+        t.id === id ? { ...t, ...updates } : t
+      );
+      setTiles(updated);
+      await saveToBackend(updated);
+    },
+    [tiles, saveToBackend]
+  );
 
-  const updateTile = async (id: string, updates: Partial<Tile>) => {
-    const updated = tiles.map((t) =>
-      t.id === id ? { ...t, ...updates } : t
-    );
-    setTiles(updated);
-    await saveToBackend(updated);
-  };
+  const deleteTile = useCallback(
+    async (id: string) => {
+      const updated = tiles
+        .filter((t) => t.id !== id)
+        .map((t, i) => ({ ...t, order: i + 1 }));
+      setTiles(updated);
+      await saveToBackend(updated);
+    },
+    [tiles, saveToBackend]
+  );
 
-  const deleteTile = async (id: string) => {
-    const updated = tiles
-      .filter((t) => t.id !== id)
-      .map((t, index) => ({ ...t, order: index + 1 }));
-    setTiles(updated);
-    await saveToBackend(updated);
-  };
-
-  const reorderTiles = async (newOrder: Tile[]) => {
-    const reordered = newOrder.map((t, index) => ({
-      ...t,
-      order: index + 1,
-    }));
-    setTiles(reordered);
-    await saveToBackend(reordered);
-  };
+  const reorderTiles = useCallback(
+    async (newOrder: Tile[]) => {
+      const reordered = newOrder.map((t, i) => ({ ...t, order: i + 1 }));
+      setTiles(reordered);
+      await saveToBackend(reordered);
+    },
+    [saveToBackend]
+  );
 
   return {
     tiles: [...tiles].sort((a, b) => a.order - b.order),
     theme,
     isLoading,
+
+    // ✅ altijd geldige functies
     addTile,
     updateTile,
     deleteTile,
     reorderTiles,
+
     saveTheme: async (newTheme: ThemeSettings) => {
-      setTheme({ ...newTheme, logoUrl: null });
+      setTheme({ ...newTheme, logoUrl: newTheme.logoUrl || "" });
       await saveToBackend(tiles);
     },
   };
