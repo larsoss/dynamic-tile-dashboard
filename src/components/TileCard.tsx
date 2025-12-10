@@ -1,14 +1,14 @@
 import { Tile, TILE_COLORS } from '@/types/tile';
 import { cn } from '@/lib/utils';
-import { 
-  LayoutDashboard, 
-  BarChart3, 
-  Megaphone, 
-  Lightbulb, 
-  FileText, 
+import {
+  LayoutDashboard,
+  BarChart3,
+  Megaphone,
+  Lightbulb,
+  FileText,
   BookOpen,
   Users,
-  Calendar
+  Calendar,
 } from 'lucide-react';
 
 interface TileCardProps {
@@ -48,11 +48,12 @@ export function TileCard({ tile, index }: TileCardProps) {
     >
       {/* Icon or Image */}
       <div className="mb-4 transition-transform duration-300 group-hover:scale-110">
-        {tile.imageUrl ? (
+        {tile.icon ? (
           <img
-            src={tile.imageUrl}
+            src={tile.icon}
             alt={tile.title}
             className="w-16 h-16 object-contain"
+            loading="lazy"
           />
         ) : (
           <Icon className="w-16 h-16 text-foreground/80" strokeWidth={1.5} />
