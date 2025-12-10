@@ -10,19 +10,31 @@ import { AdminLogin } from "@/components/AdminLogin";
 import { useState } from "react";
 
 const Admin = () => {
-  // ✅ hooks horen HIER
   const [isAdmin, setIsAdmin] = useState(
     Boolean(localStorage.getItem("adminToken"))
   );
 
-  const { tiles, theme } = useTileStore();
+  const {
+    tiles,
+    theme,
+    isLoading,
+    saveTheme,
+  } = useTileStore();
 
-  // ✅ niet ingelogd → login scherm
+  // 🔒 Niet ingelogd
   if (!isAdmin) {
     return <AdminLogin onSuccess={() => setIsAdmin(true)} />;
   }
 
-  // ✅ ingelogd → admin panel
+  // ⏳ Data nog aan het laden
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Admin wordt geladen…
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header theme={theme} />
@@ -69,11 +81,14 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="tiles">
-            <TileManager tiles={tiles} />
+            <TileManager />
           </TabsContent>
 
           <TabsContent value="theme">
-            <ThemeCustomizer />
+            <ThemeCustomizer
+              theme={theme}
+              onSave={saveTheme}
+            />
           </TabsContent>
         </Tabs>
       </main>
