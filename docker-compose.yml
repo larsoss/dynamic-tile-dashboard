@@ -1,0 +1,8 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - DB_PATH=/data/dashboard.db
+    volumes:
+      - ./data:/data
