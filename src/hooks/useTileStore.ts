@@ -27,7 +27,7 @@ type ApiConfig = {
 };
 
 /**
- * ✅ Browser-safe ID generator (werkt ook op TV / oudere browsers)
+ * ✅ Browser-safe ID generator
  */
 function generateId(): string {
   return (
@@ -36,9 +36,22 @@ function generateId(): string {
   );
 }
 
+/**
+ * ✅ Altijd geldige default theme (NOOIT null)
+ */
+const DEFAULT_THEME: ThemeSettings = {
+  primaryColor: "#0f172a",
+  secondaryColor: "#38bdf8",
+  backgroundColor: "#020617",
+  textColor: "#ffffff",
+  welcomeTitle: "",
+  welcomeSubtitle: "",
+  logoUrl: null,
+};
+
 export function useTileStore() {
   const [tiles, setTiles] = useState<Tile[]>([]);
-  const [theme, setTheme] = useState<ThemeSettings | null>(null);
+  const [theme, setTheme] = useState<ThemeSettings>(DEFAULT_THEME);
   const [isLoading, setIsLoading] = useState(true);
 
   /**
@@ -62,13 +75,16 @@ export function useTileStore() {
 
         setTiles(loadedTiles);
 
+        // ✅ theme altijd volledig
         setTheme({
-          primaryColor: data.theme.primary_color ?? "#0f172a",
-          secondaryColor: data.theme.accent_color ?? "#38bdf8",
-          backgroundColor: data.theme.background_color ?? "#020617",
-          textColor: "#ffffff",
-          welcomeTitle: data.settings.site_name,
-          welcomeSubtitle: data.settings.subtitle,
+          primaryColor: data.theme.primary_color ?? DEFAULT_THEME.primaryColor,
+          secondaryColor: data.theme.accent_color ?? DEFAULT_THEME.secondaryColor,
+          backgroundColor:
+            data.theme.background_color ?? DEFAULT_THEME.backgroundColor,
+          textColor: DEFAULT_THEME.textColor,
+          welcomeTitle: data.settings.site_name ?? "",
+          welcomeSubtitle: data.settings.subtitle ?? "",
+          logoUrl: null, // toekomstvast
         });
 
         setIsLoading(false);
@@ -83,12 +99,13 @@ export function useTileStore() {
    * 2️⃣ Theme toepassen op CSS variables
    */
   useEffect(() => {
-    if (!theme) return;
-
     const root = document.documentElement;
     root.style.setProperty("--theme-primary", hexToHSL(theme.primaryColor));
     root.style.setProperty("--theme-secondary", hexToHSL(theme.secondaryColor));
-    root.style.setProperty("--theme-background", hexToHSL(theme.backgroundColor));
+    root.style.setProperty(
+      "--theme-background",
+      hexToHSL(theme.backgroundColor)
+    );
     root.style.setProperty("--theme-text", hexToHSL(theme.textColor));
   }, [theme]);
 
@@ -101,7 +118,6 @@ export function useTileStore() {
       alert("Admin token ontbreekt");
       throw new Error("No admin token");
     }
-    if (!theme) return;
 
     const payload = {
       settings: {
@@ -187,14 +203,14 @@ export function useTileStore() {
     deleteTile,
     reorderTiles,
     saveTheme: async (newTheme: ThemeSettings) => {
-      setTheme(newTheme);
+      setTheme({ ...newTheme, logoUrl: null });
       await saveToBackend(tiles);
     },
   };
 }
 
 /**
- * Helper: hex → HSL (voor CSS variables)
+ * Helper: hex → HSL
  */
 function hexToHSL(hex: string): string {
   hex = hex.replace(/^#/, "");
