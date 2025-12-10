@@ -14,6 +14,10 @@ export interface ThemeSettings {
   secondaryColor: string;
   backgroundColor: string;
   textColor: string;
+  siteName: string;
+  welcomeTitle: string;
+  welcomeSubtitle: string;
+  logoUrl: string;
 }
 
 export const DEFAULT_THEME: ThemeSettings = {
@@ -21,6 +25,10 @@ export const DEFAULT_THEME: ThemeSettings = {
   secondaryColor: '#A88CC8',
   backgroundColor: '#FFF5EB',
   textColor: '#2D3748',
+  siteName: 'TileHub',
+  welcomeTitle: 'Welcome to TileHub',
+  welcomeSubtitle: 'Your central navigation portal',
+  logoUrl: '',
 };
 
 export const TILE_COLORS: Record<TileColor, string> = {

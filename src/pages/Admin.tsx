@@ -29,7 +29,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <Header theme={theme} />
       <main className="container py-8">
         <div className="mb-8">
           <Link to="/">
