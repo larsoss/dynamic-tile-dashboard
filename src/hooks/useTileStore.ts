@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { Tile, ThemeSettings } from "@/types/tile";
 
+/**
+ * Structuur zoals de backend /api/config terugstuurt
+ */
 type ApiConfig = {
   settings: {
     site_name: string;
@@ -12,7 +15,15 @@ type ApiConfig = {
     accent_color: string | null;
     border_radius: number | null;
   };
-  tiles: any[];
+  tiles: {
+    id?: number;
+    title: string;
+    url: string;
+    icon?: string | null;
+    color?: string | null;
+    position?: number;
+    enabled?: number;
+  }[];
 };
 
 export function useTileStore() {
@@ -20,7 +31,9 @@ export function useTileStore() {
   const [theme, setTheme] = useState<ThemeSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Stap 1: config laden uit backend (DB)
+  /**
+   * 1️⃣ Laden van config uit backend (SQLite)
+   */
   useEffect(() => {
     fetch("/api/config")
       .then((res) => {
@@ -29,18 +42,18 @@ export function useTileStore() {
       })
       .then((data: ApiConfig) => {
         // Tiles
-        setTiles(
-          (data.tiles || []).map((t, index) => ({
-            id: t.id,
-            title: t.title,
-            url: t.url,
-            icon: t.icon,
-            color: t.color,
-            order: t.position ?? index + 1,
-          }))
-        );
+        const loadedTiles: Tile[] = (data.tiles || []).map((t, index) => ({
+          id: String(t.id ?? crypto.randomUUID()),
+          title: t.title,
+          url: t.url,
+          icon: t.icon ?? undefined,
+          color: t.color ?? undefined,
+          order: t.position ?? index + 1,
+        }));
 
-        // Theme → omzetten naar jouw ThemeSettings
+        setTiles(loadedTiles);
+
+        // Theme
         setTheme({
           primaryColor: data.theme.primary_color ?? "#0f172a",
           secondaryColor: data.theme.accent_color ?? "#38bdf8",
@@ -58,7 +71,9 @@ export function useTileStore() {
       });
   }, []);
 
-  // ✅ Theme toepassen op CSS-variabelen (dit blijft intact)
+  /**
+   * 2️⃣ Theme toepassen op CSS variables
+   */
   useEffect(() => {
     if (!theme) return;
 
@@ -69,21 +84,91 @@ export function useTileStore() {
     root.style.setProperty("--theme-text", hexToHSL(theme.textColor));
   }, [theme]);
 
-  // ⛔️ Opslaan doen we LATER via backend (Admin-pagina)
-  const addTile = () => {
-    console.warn("addTile not implemented yet (DB-backed)");
+  /**
+   * Helper: alles opslaan naar backend
+   */
+  async function saveToBackend(updatedTiles: Tile[]) {
+    const adminToken = localStorage.getItem("adminToken");
+    if (!adminToken) {
+      alert("Admin token ontbreekt");
+      throw new Error("No admin token");
+    }
+
+    if (!theme) return;
+
+    const payload = {
+      settings: {
+        site_name: theme.welcomeTitle,
+        subtitle: theme.welcomeSubtitle,
+      },
+      theme: {
+        primary_color: theme.primaryColor,
+        background_color: theme.backgroundColor,
+        accent_color: theme.secondaryColor,
+        border_radius: 16,
+      },
+      tiles: updatedTiles.map((t, index) => ({
+        title: t.title,
+        url: t.url,
+        icon: t.icon ?? null,
+        color: t.color ?? null,
+        position: index + 1,
+        enabled: 1,
+      })),
+    };
+
+    const res = await fetch("/api/config", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error("Opslaan naar backend mislukt");
+    }
+  }
+
+  /**
+   * 3️⃣ Tile-acties (nu écht DB-backed)
+   */
+  const addTile = async (tile: Omit<Tile, "id" | "order">) => {
+    const newTile: Tile = {
+      ...tile,
+      id: crypto.randomUUID(),
+      order: tiles.length + 1,
+    };
+
+    const updated = [...tiles, newTile];
+    setTiles(updated);
+    await saveToBackend(updated);
   };
 
-  const updateTile = () => {
-    console.warn("updateTile not implemented yet (DB-backed)");
+  const updateTile = async (id: string, updates: Partial<Tile>) => {
+    const updated = tiles.map((t) =>
+      t.id === id ? { ...t, ...updates } : t
+    );
+    setTiles(updated);
+    await saveToBackend(updated);
   };
 
-  const deleteTile = () => {
-    console.warn("deleteTile not implemented yet (DB-backed)");
+  const deleteTile = async (id: string) => {
+    const updated = tiles
+      .filter((t) => t.id !== id)
+      .map((t, index) => ({ ...t, order: index + 1 }));
+    setTiles(updated);
+    await saveToBackend(updated);
   };
 
-  const reorderTiles = () => {
-    console.warn("reorderTiles not implemented yet (DB-backed)");
+  const reorderTiles = async (newOrder: Tile[]) => {
+    const reordered = newOrder.map((t, index) => ({
+      ...t,
+      order: index + 1,
+    }));
+    setTiles(reordered);
+    await saveToBackend(reordered);
   };
 
   return {
@@ -94,13 +179,16 @@ export function useTileStore() {
     updateTile,
     deleteTile,
     reorderTiles,
-    saveTheme: () => {
-      console.warn("saveTheme not implemented yet (DB-backed)");
+    saveTheme: async (newTheme: ThemeSettings) => {
+      setTheme(newTheme);
+      await saveToBackend(tiles);
     },
   };
 }
 
-// Helper blijft exact hetzelfde
+/**
+ * Helper: hex → HSL voor CSS variables
+ */
 function hexToHSL(hex: string): string {
   hex = hex.replace(/^#/, "");
   const r = parseInt(hex.substring(0, 2), 16) / 255;
